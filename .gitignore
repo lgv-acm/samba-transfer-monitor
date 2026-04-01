@@ -1,0 +1,5 @@
+# Credentials / environment config — never commit real values
+.env
+
+# CSV history log
+samba_transfer_history.csv
