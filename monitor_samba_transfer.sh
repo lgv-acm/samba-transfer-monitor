@@ -8,6 +8,7 @@ NETWORK_INTERFACE="${NETWORK_INTERFACE:-}"
 SAMPLE_INTERVAL_SECONDS="${SAMPLE_INTERVAL_SECONDS:-1}"
 SAMPLE_COUNT="${SAMPLE_COUNT:-10}"
 OUTPUT_FILE="${OUTPUT_FILE:-./samba_transfer_history.txt}"
+BYTES_PER_MIB="${BYTES_PER_MIB:-1048576}"
 
 HEADER="timestamp samba_server interface interval_seconds download_bytes_per_sec upload_bytes_per_sec download_mib_per_sec upload_mib_per_sec"
 
@@ -39,7 +40,11 @@ read_bytes() {
 }
 
 to_mib_per_sec() {
-  awk -v bytes_per_sec="$1" 'BEGIN { printf "%.6f", (bytes_per_sec / 1048576) }'
+  awk -v bytes_per_sec="$1" -v bytes_per_mib="$BYTES_PER_MIB" 'BEGIN { printf "%.6f", (bytes_per_sec / bytes_per_mib) }'
+}
+
+to_bytes_per_sec() {
+  awk -v bytes_diff="$1" -v interval="$2" 'BEGIN { printf "%.6f", (bytes_diff / interval) }'
 }
 
 validate_positive_integer() {
@@ -54,6 +59,7 @@ validate_positive_integer() {
 main() {
   validate_positive_integer "$SAMPLE_INTERVAL_SECONDS" "SAMPLE_INTERVAL_SECONDS"
   validate_positive_integer "$SAMPLE_COUNT" "SAMPLE_COUNT"
+  validate_positive_integer "$BYTES_PER_MIB" "BYTES_PER_MIB"
 
   local interface="$NETWORK_INTERFACE"
   if [[ -z "$interface" ]]; then
@@ -78,20 +84,22 @@ main() {
     local rx_start tx_start rx_end tx_end
     rx_start="$(read_bytes "$interface" "rx")"
     tx_start="$(read_bytes "$interface" "tx")"
-
     sleep "$SAMPLE_INTERVAL_SECONDS"
 
     rx_end="$(read_bytes "$interface" "rx")"
     tx_end="$(read_bytes "$interface" "tx")"
+    local timestamp
+    timestamp="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
-    local download_bps upload_bps
-    download_bps=$(( (rx_end - rx_start) / SAMPLE_INTERVAL_SECONDS ))
-    upload_bps=$(( (tx_end - tx_start) / SAMPLE_INTERVAL_SECONDS ))
+    local rx_diff tx_diff download_bps upload_bps
+    rx_diff=$(( rx_end - rx_start ))
+    tx_diff=$(( tx_end - tx_start ))
+    download_bps="$(to_bytes_per_sec "$rx_diff" "$SAMPLE_INTERVAL_SECONDS")"
+    upload_bps="$(to_bytes_per_sec "$tx_diff" "$SAMPLE_INTERVAL_SECONDS")"
 
-    local download_mib upload_mib timestamp
+    local download_mib upload_mib
     download_mib="$(to_mib_per_sec "$download_bps")"
     upload_mib="$(to_mib_per_sec "$upload_bps")"
-    timestamp="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
     printf "%s %s %s %s %s %s %s %s\n" \
       "$timestamp" \
