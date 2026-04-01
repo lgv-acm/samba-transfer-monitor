@@ -25,7 +25,13 @@ A Bash script to benchmark and monitor upload/download transfer speeds to and fr
    cd samba-transfer-monitor
    ```
 
-2. **Edit `monitor_samba_speed.sh`** and set the configuration variables at the top of the file:
+2. **Create your `.env` file** from the provided example and fill in your values:
+   ```bash
+   cp .env.example .env
+   chmod 600 .env   # restrict read access — file contains credentials
+   ```
+
+   Edit `.env` and set the following variables:
 
    | Variable       | Description                                              | Example                  |
    |----------------|----------------------------------------------------------|--------------------------|
@@ -36,7 +42,9 @@ A Bash script to benchmark and monitor upload/download transfer speeds to and fr
    | `LOCAL_TMP`    | Local directory for temporary test files                 | `/tmp/samba_speed_test_local` |
    | `REMOTE_TMP`   | Directory on the share where tests run (must be writable)| `speedtest`              |
    | `FILE_SIZE_MB` | Size of the test file in MB                              | `10`                     |
-   | `OUTPUT_FILE`  | Path of the output CSV log file                          | `samba_transfer_history.csv` |
+   | `OUTPUT_FILE`  | Path of the output CSV log file                          | `/var/log/samba_transfer_history.csv` |
+
+   The script loads these variables automatically at startup via `set -a; source .env; set +a`.
 
 3. **Make the script executable** (if it isn't already):
    ```bash
@@ -101,12 +109,13 @@ Use an absolute path for `OUTPUT_FILE` in the script when running via cron, so t
 
 ## Security Warning
 
-> ⚠️ **Warning:** Storing credentials (username and password) in plain text inside a script is insecure.  
-> For production or shared systems, consider these safer alternatives:
+> ⚠️ **Warning:** Storing credentials (username and password) in plain text is insecure.  
+> Follow these practices to reduce risk:
 >
-> - **Use a `.smbcredentials` file** with restricted permissions (`chmod 600`) and reference it with the `--authentication-file` option of `smbclient`.
-> - **Restrict script permissions** so only the intended user can read it (`chmod 700 monitor_samba_speed.sh`).
-> - **Never commit credentials** to version control — use environment variables or a secrets manager instead.
+> - **Never commit `.env`** to version control — it is already listed in `.gitignore`.
+> - **Restrict `.env` permissions**: `chmod 600 .env` so only the file owner can read it.
+> - **Restrict script permissions**: `chmod 700 monitor_samba_speed.sh`.
+> - For an even more secure alternative, use a `.smbcredentials` file with the `--authentication-file` option of `smbclient` and remove `USER`/`PASSWORD` from `.env`.
 
 ## License
 

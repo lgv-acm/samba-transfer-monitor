@@ -1,27 +1,12 @@
 #!/bin/bash
 
-# ----------- CONFIGURATION VARIABLES -----------
-
-# Samba server details
-SERVER="your-samba-server"    # e.g., 192.168.1.100 or fileserver.local
-SHARE="your_share_name"       # e.g., shared
-USER="username"
-PASSWORD="password"
-
-# Local temporary directory for test files
-LOCAL_TMP="/tmp/samba_speed_test_local"
-
-# Remote directory on the Samba share where tests will be performed
-# This directory must exist on the share and be writable
-REMOTE_TMP="speedtest"
-
-# Test file settings
-FILE_SIZE_MB=10               # Size of test file in MB
-
-# Output CSV log file (path relative to where the script is run, or use absolute path)
-OUTPUT_FILE="samba_transfer_history.csv"
-
-# ----------- END CONFIGURATION -----------
+# Load environment variables from .env file
+# shellcheck source=.env
+if [[ ! -f "$(dirname "$0")/.env" ]]; then
+    echo "Error: .env file not found. Copy .env.example to .env and fill in your values." >&2
+    exit 1
+fi
+set -a; source "$(dirname "$0")/.env"; set +a
 
 # Unique test filename per run (uses PID to avoid collisions)
 TEST_FILE="testfile_$$.tmp"
